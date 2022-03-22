@@ -1,0 +1,1 @@
+{"version":3,"file":"objFunctionCall.js","sourceRoot":"","sources":["../../../../src/test/files/js/objFunctionCall.ts"],"names":[],"mappings":";AAAA,cAAc;AAEd,SAAS,QAAQ;IACf,IAAI,CAAC,YAAY,GAAG,IAAI,CAAC,WAAW,CAAC,WAAW,CAAC,SAAS,CACxD,CAAC,QAAc,EAAE,EAAE;QACjB,IAAI,CAAC,SAAS,GAAG,QAAQ,CAAC,QAAQ,KAAK,IAAI,CAAC,OAAO,CAAC,MAAM,CAAC,QAAQ,CAAC;IACtE,CAAC,CACF,CAAC;AACJ,CAAC"}

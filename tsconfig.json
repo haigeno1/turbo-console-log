@@ -1,23 +1,17 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es6",
+    "module": "ESNext",
+    "target": "ESNext",
     "outDir": "out",
     "lib": ["es6"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
+    "moduleResolution": "Node",
     "resolveJsonModule": true
   },
   "exclude": [
-    "src/testGenerator.ts",
     "node_modules",
-    ".vscode-test",
-    "src/test/files",
-    "out/test/files"
-  ],
-  "linterOptions": {
-    "exclude": ["src/test/files/js/**"]
-  }
+  ]
 }

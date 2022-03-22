@@ -1,0 +1,1 @@
+{"version":3,"file":"functionWithDecorators.js","sourceRoot":"","sources":["../../../../src/test/files/js/functionWithDecorators.ts"],"names":[],"mappings":";AAAA,cAAc;AAMZ,KAAK,UAAU,OAAO,CACL,IAAa,EACb,IAAa,EACb,IAAa,EACR,SAAmB,EACtB,MAA2B;IAE5C,OAAO,IAAI,CAAC,iBAAiB,CAAC,eAAe,CAAC,IAAI,EAAE,IAAI,EAAE,IAAI,EAAE,SAAS,EAAE,MAAM,CAAC,CAAC;AACvF,CAAC"}

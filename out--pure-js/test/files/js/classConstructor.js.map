@@ -1,0 +1,1 @@
+{"version":3,"file":"classConstructor.js","sourceRoot":"","sources":["../../../../src/test/files/js/classConstructor.ts"],"names":[],"mappings":";AAAA,MAAM,YAAY;IACR,KAAK,GAAW,EAAE,CAAC;IAC3B,YAAY,OAA0B;QACpC,IAAI,OAAO,EAAE;YACX,IAAI,CAAC,KAAK,GAAG,OAAO,CAAC,KAAK,CAAC;SAC5B;IACH,CAAC;CACF"}
