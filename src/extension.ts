@@ -1,191 +1,114 @@
-import * as vscode from "vscode";
-import { DebugMessage } from "./debug-message";
-import { JSDebugMessage } from "./debug-message/js";
-import { ExtensionProperties, Message } from "./entities";
-import { LineCodeProcessing } from "./line-code-processing";
-import { JSLineCodeProcessing } from "./line-code-processing/js";
+import * as vscode from 'vscode';
+import { jsDebugMessage } from './debug-message/js';
+import { Command, ExtensionProperties } from './entities';
+import { getAllCommands } from './commands/';
+import { getHtmlWevView as release2110HtmlWebView } from './releases/2110';
+import { getHtmlWevView as release2120HtmlWebView } from './releases/2120';
+import { getHtmlWevView as release2130HtmlWebView } from './releases/2130';
+import { getHtmlWevView as release2140HtmlWebView } from './releases/2140';
+import { readFromGlobalState, writeToGlobalState } from './helpers';
 
-export function activate(context: vscode.ExtensionContext) {
-  const jsLineCodeProcessing: LineCodeProcessing = new JSLineCodeProcessing();
-  const jsDebugMessage: DebugMessage = new JSDebugMessage(jsLineCodeProcessing);
-  // Insert debug message
-  vscode.commands.registerCommand(
-    "turboConsoleLog.displayLogMessage",
-    async () => {
-      const editor: vscode.TextEditor | undefined =
-        vscode.window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      const tabSize: number | string = getTabSize(editor.options.tabSize);
-      const document: vscode.TextDocument = editor.document;
-      const config: vscode.WorkspaceConfiguration =
-        vscode.workspace.getConfiguration("turboConsoleLog");
-      const properties: ExtensionProperties = getExtensionProperties(config);
-      for (let index = 0; index < editor.selections.length; index++) {
-        const selection: vscode.Selection = editor.selections[index];
-        const selectedVar: string = document.getText(selection);
-        const lineOfSelectedVar: number = selection.active.line;
-        // Check if the selection line is not the last one in the document and the selected variable is not empty
-        if (selectedVar.trim().length !== 0) {
-          await editor.edit((editBuilder) => {
-            const logMessageLine = jsDebugMessage.line(
-              document,
-              lineOfSelectedVar,
-              selectedVar
-            );
-            jsDebugMessage.msg(
-              editBuilder,
-              document,
-              selectedVar,
-              lineOfSelectedVar,
-              properties.wrapLogMessage,
-              properties.logMessagePrefix,
-              properties.quote,
-              properties.addSemicolonInTheEnd,
-              properties.insertEnclosingClass,
-              properties.insertEnclosingFunction,
-              properties.delimiterInsideMessage,
-              properties.includeFileNameAndLineNum,
-              tabSize
-            );
-          });
-        }
-      }
-    }
-  );
-  // Comment all debug messages
-  vscode.commands.registerCommand(
-    "turboConsoleLog.commentAllLogMessages",
-    () => {
-      const editor: vscode.TextEditor | undefined =
-        vscode.window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      const tabSize: number = getTabSize(editor.options.tabSize);
-      const document: vscode.TextDocument = editor.document;
-      const config: vscode.WorkspaceConfiguration =
-        vscode.workspace.getConfiguration("turboConsoleLog");
-      const properties: ExtensionProperties = getExtensionProperties(config);
-      const logMessages: Message[] = jsDebugMessage.detectAll(
-        document,
-        tabSize,
-        properties.delimiterInsideMessage,
-        properties.quote
-      );
-      editor.edit((editBuilder) => {
-        logMessages.forEach(({ spaces, lines }) => {
-          lines.forEach((line: vscode.Range) => {
-            editBuilder.delete(line);
-            editBuilder.insert(
-              new vscode.Position(line.start.line, 0),
-              `${spaces}// ${document.getText(line).trim()}\n`
-            );
-          });
-        });
-      });
-    }
-  );
-  // Uncomment all debug messages
-  vscode.commands.registerCommand(
-    "turboConsoleLog.uncommentAllLogMessages",
-    () => {
-      const editor: vscode.TextEditor | undefined =
-        vscode.window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      const tabSize: number = getTabSize(editor.options.tabSize);
-      const document: vscode.TextDocument = editor.document;
-      const config: vscode.WorkspaceConfiguration =
-        vscode.workspace.getConfiguration("turboConsoleLog");
-      const properties: ExtensionProperties = getExtensionProperties(config);
-      const logMessages: Message[] = jsDebugMessage.detectAll(
-        document,
-        tabSize,
-        properties.delimiterInsideMessage,
-        properties.quote
-      );
-      editor.edit((editBuilder) => {
-        logMessages.forEach(({ spaces, lines }) => {
-          lines.forEach((line: vscode.Range) => {
-            editBuilder.delete(line);
-            editBuilder.insert(
-              new vscode.Position(line.start.line, 0),
-              `${spaces}${document.getText(line).replace(/\//g, "").trim()}\n`
-            );
-          });
-        });
-      });
-    }
-  );
-  // Delete all debug messages
-  vscode.commands.registerCommand(
-    "turboConsoleLog.deleteAllLogMessages",
-    () => {
-      const editor: vscode.TextEditor | undefined =
-        vscode.window.activeTextEditor;
-      if (!editor) {
-        return;
-      }
-      const tabSize: number = getTabSize(editor.options.tabSize);
-      const document: vscode.TextDocument = editor.document;
-      const config: vscode.WorkspaceConfiguration =
-        vscode.workspace.getConfiguration("turboConsoleLog");
-      const properties: ExtensionProperties = getExtensionProperties(config);
-      const logMessages: Message[] = jsDebugMessage.detectAll(
-        document,
-        tabSize,
-        properties.delimiterInsideMessage,
-        properties.quote
-      );
-      editor.edit((editBuilder) => {
-        logMessages.forEach(({ lines }) => {
-          lines.forEach((line: vscode.Range) => {
-            editBuilder.delete(line);
-          });
-        });
-      });
-    }
-  );
+const latestReleaseVersion = '2.14.0';
+
+const RELEASE_NOTES: Record<
+  string,
+  { webViewHtml: string; notification: string }
+> = {
+  '2.11.0': {
+    webViewHtml: release2110HtmlWebView(),
+    notification:
+      "We've introduced an **automatic log correction** feature!\n\nYour logs now **update themselves** after refactoring – no manual edits needed!\n\n🚀 Try It Now\n\nRun the new command: `turboConsoleLog.correctAllLogMessages`",
+  },
+  '2.12.0': {
+    webViewHtml: release2120HtmlWebView(),
+    notification:
+      'Turbo Console Log v2.12.0 is out! This release makes the extension MORE STABLE than ever with critical bug fixes, more details in the release note.',
+  },
+  '2.13.0': {
+    webViewHtml: release2130HtmlWebView(),
+    notification:
+      'Turbo Console Log v2.13.0 is here! 🚀\n\nThis release brings **smarter log placement**, improved **quote selection**, and **better TypeScript support**.\n\n🔹 Logs now appear exactly where they should in **object & array assignments**.\n🔹 **Single-line expressions** are now handled with precision.\n🔹 **Quote selection** intelligently adapts to variable content.\n\n🔍 Read the full release notes to explore all the fixes & improvements!',
+  },
+  '2.14.0': {
+    webViewHtml: release2140HtmlWebView(),
+    notification: `Turbo Console Log v2.14.0 is live! 🔥
+
+This update sharpens the engine with **precision fixes** and paves the way for what's next.
+
+✅ Improved function call log placement  
+✅ Better quote handling in object logs  
+✅ Edge-case fix for anonymous arrow functions  
+✅ More accurate positioning around returns
+
+🎯 It’s all about **stability, trust, and long-term value**.
+
+📰 Read the full release note to dive in!`,
+  },
+};
+
+export function activate(context: vscode.ExtensionContext): void {
+  const config: vscode.WorkspaceConfiguration =
+    vscode.workspace.getConfiguration('turboConsoleLog');
+  const properties: ExtensionProperties = getExtensionProperties(config);
+  const commands: Array<Command> = getAllCommands();
+
+  for (const { name, handler } of commands) {
+    vscode.commands.registerCommand(name, (args: unknown[]) => {
+      handler(properties, jsDebugMessage, args);
+    });
+  }
+
+  showReleaseHtmlWebViewAndNotification(context);
 }
-
-export function deactivate() {}
 
 function getExtensionProperties(
-  workspaceConfig: vscode.WorkspaceConfiguration
+  workspaceConfig: vscode.WorkspaceConfiguration,
 ) {
-  const wrapLogMessage = workspaceConfig.wrapLogMessage || false;
-  const logMessagePrefix = workspaceConfig.logMessagePrefix
-    ? workspaceConfig.logMessagePrefix
-    : "";
-  const addSemicolonInTheEnd = workspaceConfig.addSemicolonInTheEnd || false;
-  const insertEnclosingClass = workspaceConfig.insertEnclosingClass;
-  const insertEnclosingFunction = workspaceConfig.insertEnclosingFunction;
-  const quote = workspaceConfig.quote || '"';
-  const delimiterInsideMessage = workspaceConfig.delimiterInsideMessage || "~";
-  const includeFileNameAndLineNum =
-    workspaceConfig.includeFileNameAndLineNum || false;
-  const extensionProperties: ExtensionProperties = {
-    wrapLogMessage,
-    logMessagePrefix,
-    addSemicolonInTheEnd,
-    insertEnclosingClass,
-    insertEnclosingFunction,
-    quote,
-    delimiterInsideMessage,
-    includeFileNameAndLineNum,
+  return {
+    wrapLogMessage: workspaceConfig.wrapLogMessage ?? false,
+    logMessagePrefix: workspaceConfig.logMessagePrefix ?? '🚀',
+    logMessageSuffix: workspaceConfig.logMessageSuffix ?? ':',
+    addSemicolonInTheEnd: workspaceConfig.addSemicolonInTheEnd ?? false,
+    insertEnclosingClass: workspaceConfig.insertEnclosingClass ?? true,
+    insertEnclosingFunction: workspaceConfig.insertEnclosingFunction ?? true,
+    insertEmptyLineBeforeLogMessage:
+      workspaceConfig.insertEmptyLineBeforeLogMessage ?? false,
+    insertEmptyLineAfterLogMessage:
+      workspaceConfig.insertEmptyLineAfterLogMessage ?? false,
+    quote: workspaceConfig.quote ?? '"',
+    delimiterInsideMessage: workspaceConfig.delimiterInsideMessage ?? '~',
+    includeLineNum: workspaceConfig.includeLineNum ?? false,
+    includeFilename: workspaceConfig.includeFilename ?? false,
+    logType: workspaceConfig.logType ?? 'log',
+    logFunction: workspaceConfig.logFunction ?? 'log',
   };
-  return extensionProperties;
 }
 
-function getTabSize(tabSize: string | number | undefined): number {
-  if (tabSize && typeof tabSize === "number") {
-    return tabSize;
-  } else if (tabSize && typeof tabSize === "string") {
-    return parseInt(tabSize);
-  } else {
-    return 4;
+// Function to check version and show notification
+function showReleaseHtmlWebViewAndNotification(
+  context: vscode.ExtensionContext,
+): void {
+  const wasNotificationShown = readFromGlobalState(
+    context,
+    `IS_NOTIFICATION_SHOWN_${latestReleaseVersion}`,
+  );
+  if (!wasNotificationShown) {
+    openWhatsNewWebView(RELEASE_NOTES[latestReleaseVersion].webViewHtml);
+    writeToGlobalState(
+      context,
+      `IS_NOTIFICATION_SHOWN_${latestReleaseVersion}`,
+      true,
+    );
   }
+}
+
+function openWhatsNewWebView(htmlContent: string) {
+  const panel = vscode.window.createWebviewPanel(
+    'turboConsoleLogUpdates',
+    '🚀 Turbo Console Log - Release v2.14.0 Notes',
+    vscode.ViewColumn.One,
+    { enableScripts: true },
+  );
+
+  panel.webview.html = htmlContent;
 }
